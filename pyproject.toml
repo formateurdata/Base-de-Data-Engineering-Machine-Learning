@@ -1,0 +1,18 @@
+[project]
+name = "bases-de-data-engineering-et-machine-learning1"
+version = "0.1.0"
+description = "Bases de Data Engineering et Machine Learning"
+readme = "README.md"
+authors = [
+    { name = "Mouaad", email = "mouaad.agrm@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "pandas==3.0.6",
+    "pyarrow==26.0.0",
+    "scikit-learn==1.9.1",
+    "zenml[server]==0.98.0",
+]
+
+[tool.uv]
+package = false

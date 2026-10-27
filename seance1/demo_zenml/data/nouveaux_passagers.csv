@@ -1,0 +1,5 @@
+PassengerId,Pclass,Name,Sex,Age,SibSp,Parch,Ticket,Fare,Cabin,Embarked
+9001,3,"Dawson, Mr. Jack",male,20,0,0,DEMO-1,7.75,,S
+9002,1,"DeWitt Bukater, Miss. Rose",female,17,0,1,DEMO-2,151.55,B52,S
+9003,2,"Martin, Mrs. Claire",female,34,1,2,DEMO-3,26.0,,C
+9004,3,"Petit, Master. Louis",male,6,1,1,DEMO-4,15.25,,Q
