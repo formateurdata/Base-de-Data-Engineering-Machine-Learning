@@ -34,7 +34,6 @@ seance2/tp/.ruff_cache/
 !seance2/tp/data/raw/SOURCES.md
 seance2/tp/data/clean/*
 seance2/tp/data/state/*
-seance2/tp/data/raw/*
 seance2/tp/data/tmp/*
 
 !seance2/tp/data/clean/.gitkeep
