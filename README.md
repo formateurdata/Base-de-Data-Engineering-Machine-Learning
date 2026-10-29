@@ -30,3 +30,5 @@ Les commandes se lancent ensuite avec `uv run ...`, depuis n'importe quel dossie
 ## Séances
 
 - [Séance 1 : démo ZenML, pipeline ML Titanic](seance1/demo_zenml/README.md)
+- [Séance 2 : démonstration d'une ingestion fiable](seance2/demo_ingestion.ipynb)
+- [Séance 2 : travaux pratiques d'ingestion](seance2/tp/README.md)

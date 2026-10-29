@@ -12,12 +12,13 @@ une base PostgreSQL (Pagila), lancée avec Docker Compose.
 
 ## Avant la séance
 
-1. Python 3.13 et les dépendances, dans un environnement virtuel :
+1. Installer [uv](https://docs.astral.sh/uv/) comme indiqué dans le [README du module](../../README.md), puis, depuis la racine du dépôt :
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate          # Windows : .venv\Scripts\activate
-   pip install -r requirements.txt
+   uv sync
+   cd seance2/tp
+   uv run --with-requirements requirements.txt jupyter lab
    ```
+   `uv` gère l'environnement Python et les dépendances supplémentaires des TP. Aucune activation manuelle de l'environnement n'est nécessaire. Dans JupyterLab, ouvrir le notebook du TP 1 ou du TP 2 et choisir le noyau Python de cet environnement.
 2. Docker Desktop installé et lancé, puis les images téléchargées à l'avance :
    ```bash
    cd tp3_postgres
@@ -54,4 +55,11 @@ tp3_postgres/    docker-compose.yml, scripts d'initialisation, squelettes du TP 
 tp4_script/      squelettes du TP 4 et verifier.py
 ```
 
-Les commandes Python se lancent depuis le dossier du script : `cd tp3_postgres && python ingest_postgres.py`.
+Les commandes Python se lancent avec `uv`, depuis le dossier du script. Par exemple, depuis `seance2/tp` :
+
+```bash
+cd tp3_postgres
+uv run --with-requirements ../requirements.txt python ingest_postgres.py
+```
+
+Pour le TP 4, utiliser la même forme depuis `tp4_script` : `uv run --with-requirements ../requirements.txt python run_all.py`.
