@@ -1,0 +1,5 @@
+line-length = 120
+
+[lint]
+# Erreurs, avertissements, imports, bonnes pratiques Pandas, modernisation du code
+select = ["E", "W", "F", "I", "PD", "UP", "B"]

@@ -1,0 +1,34 @@
+# Base PostgreSQL source du TP 3 : la base d'exemple Pagila (locations de DVD).
+# Les scripts de init/ s'exécutent une seule fois, au premier démarrage, dans l'ordre alphabétique.
+services:
+  postgres:
+    image: postgres:18.0
+    container_name: tp3_pagila
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: pagila
+      LECTEUR_PASSWORD: ${LECTEUR_PASSWORD}
+    ports:
+      - "${PG_PORT:-5433}:5432"
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d:ro
+      - pagila_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pagila"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Interface web facultative pour parcourir la base : http://localhost:8080
+  adminer:
+    image: adminer:5.4.1
+    profiles: ["outils"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pagila_data:

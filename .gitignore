@@ -25,4 +25,16 @@ src/
 CLAUDE.MD
 REVIEW_*.md
 seance1/atelier/
-seance2/
+seance2/tp/corrections/
+seance2/tp/*_correction.ipynb
+séance2/tp/.ruff_cache/
+seance2/tp/data/clean/
+seance2/tp/data/state/
+séance1/atelier/
+seance2/tp/.ruff_cache/
+
+seance2/tp/data/clean/
+seance2/tp/data/raw/
+!seance2/tp/data/raw/SOURCES.md
+seance2/tp/data/tmp/
+seance2/tp/data/state/

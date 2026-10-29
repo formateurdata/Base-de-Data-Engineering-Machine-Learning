@@ -1,0 +1,11 @@
+pandas==3.0.6
+pyarrow==26.0.0
+numpy==2.5.4
+polars==2.0.0
+requests==2.34.2
+sqlalchemy==2.1.6
+psycopg[binary]==3.3.6
+python-dotenv==1.2.4
+ruff==0.17.2
+jupyterlab==4.6.4
+ipykernel==7.4.0

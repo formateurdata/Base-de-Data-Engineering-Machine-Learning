@@ -1,0 +1,37 @@
+{
+ "machine": "arm64, Darwin 27.0.0, Python 3.13.17",
+ "versions": {
+  "pandas": "3.0.6",
+  "polars": "2.0.0"
+ },
+ "csv": {
+  "lignes": 125187,
+  "taille_csv_mo": 13.8,
+  "taille_parquet_mo": 2.3,
+  "memoire_implicite_mo": 19.9,
+  "memoire_explicite_mo": 12.1,
+  "memoire_reduite_mo": 6.8,
+  "temps_implicite_s": 0.156,
+  "temps_explicite_s": 0.385,
+  "temps_reduite_s": 0.261,
+  "temps_pyarrow_s": 0.033,
+  "temps_parquet_s": 0.006,
+  "temps_polars_s": 0.01
+ },
+ "boucles": {
+  "lignes": 125187,
+  "temps_iterrows_s": 1.453,
+  "temps_apply_s": 0.275,
+  "temps_vectorise_s": 4.9e-05
+ },
+ "sql": {
+  "lignes_transferees_select_etoile": 16044,
+  "colonnes_select_etoile": 25,
+  "memoire_select_etoile_mo": 9.7,
+  "lignes_gardees": 5868,
+  "lignes_transferees_filtre_sql": 5868,
+  "memoire_filtre_sql_mo": 0.3,
+  "temps_filtre_pandas_s": 0.188,
+  "temps_filtre_sql_s": 0.015
+ }
+}
