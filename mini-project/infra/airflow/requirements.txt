@@ -1,0 +1,5 @@
+# Bibliothèques utilisées par les DAG, en plus d'Airflow. Les versions viennent du fichier de contraintes du Dockerfile.
+apache-airflow-providers-apache-hdfs
+apache-airflow-providers-postgres
+pandas
+pyarrow

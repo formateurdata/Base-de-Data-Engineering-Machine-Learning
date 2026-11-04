@@ -1,0 +1,39 @@
+name: Images de la mission Boutique
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - mini-project/infra/airflow/**
+      - mini-project/infra/hadoop/**
+      - .github/workflows/mini-project-images.yml
+permissions:
+  contents: read
+  packages: write
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - component: airflow
+            tag: 3.3.2-1
+          - component: hadoop
+            tag: 3.5.0-1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: mini-project/infra/${{ matrix.component }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/formateurdata/bac4-${{ matrix.component }}:${{ matrix.tag }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}

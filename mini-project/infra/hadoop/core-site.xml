@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <property>
+    <name>fs.defaultFS</name>
+    <value>hdfs://namenode:8020</value>
+  </property>
+  <!-- Les nouveaux fichiers ne sont pas lisibles par les autres utilisateurs -->
+  <property>
+    <name>fs.permissions.umask-mode</name>
+    <value>027</value>
+  </property>
+</configuration>

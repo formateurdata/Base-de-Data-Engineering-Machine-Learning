@@ -1,0 +1,2 @@
+# Fins de ligne LF partout : un script ou un Dockerfile en CRLF, après un clone sous Windows, casserait les conteneurs.
+* text=auto eol=lf

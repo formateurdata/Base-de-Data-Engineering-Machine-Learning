@@ -1,0 +1,206 @@
+# Infrastructure du projet du module. Conçue pour Mac et Windows : images natives ARM et x86,
+# données dans des volumes nommés, dossiers de la machine montés en lecture seule.
+name: mission_boutique
+
+# Règles communes : pas d'élévation de privilèges, aucune capacité Linux par défaut, journaux bornés sur le disque
+x-socle: &socle
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+# Capacités minimales du lancement de PostgreSQL, qui démarre en root puis passe à l'utilisateur postgres
+x-postgres: &postgres
+  <<: *socle
+  image: postgres:18.0@sha256:41fc5342eefba6cc2ccda736aaf034bbbb7c3df0fdb81516eba1ba33f360162c
+  cap_add:
+    - CHOWN
+    - DAC_OVERRIDE
+    - FOWNER
+    - SETGID
+    - SETUID
+  mem_limit: 512m
+  stop_grace_period: 30s
+
+x-hadoop: &hadoop
+  <<: *socle
+  image: ${HADOOP_IMAGE:-ghcr.io/formateurdata/bac4-hadoop:3.5.0-1}
+  build: ./hadoop
+  networks:
+    - reseau_hdfs
+
+services:
+  # Base source : la table commandes, alimentée par generer_commandes.py
+  # Les scripts de init/ s'exécutent une seule fois, au premier démarrage, dans l'ordre alphabétique.
+  source:
+    <<: *postgres
+    command:
+      - postgres
+      - -c
+      - log_connections=on
+      - -c
+      - log_statement=ddl
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - log_lock_waits=on
+      - -c
+      - "log_line_prefix=%m [%p] %u@%d/%a "
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?complétez .env à partir de .env.example}
+      POSTGRES_DB: boutique
+      LECTEUR_PASSWORD: ${LECTEUR_PASSWORD:?complétez .env à partir de .env.example}
+      GENERATEUR_PASSWORD: ${GENERATEUR_PASSWORD:?complétez .env à partir de .env.example}
+    ports:
+      - "127.0.0.1:${PG_PORT:-5434}:5432"
+    networks:
+      - reseau_source
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d:ro
+      - source_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d boutique"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # HDFS : un NameNode, un DataNode, et le dossier de la zone bronze
+  namenode:
+    <<: *hadoop
+    hostname: namenode
+    command:
+      - bash
+      - -c
+      - |
+        if [ ! -f /hadoop/dfs/name/current/VERSION ]; then
+          hdfs namenode -format -nonInteractive
+        fi
+        exec hdfs namenode
+    environment:
+      # Le journal d'audit trace qui a fait quoi dans HDFS : docker compose logs namenode
+      HDFS_NAMENODE_OPTS: -Xmx512m -Dhdfs.audit.logger=INFO,console
+    mem_limit: 1g
+    ports:
+      - "127.0.0.1:${HDFS_UI_PORT:-9870}:9870"
+    volumes:
+      - hdfs_name:/hadoop/dfs/name
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:9870/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  datanode:
+    <<: *hadoop
+    hostname: datanode
+    command: ["hdfs", "datanode"]
+    environment:
+      HDFS_DATANODE_OPTS: -Xmx256m
+    mem_limit: 768m
+    volumes:
+      - hdfs_data:/hadoop/dfs/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:9864/"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    depends_on:
+      namenode:
+        condition: service_healthy
+
+  # S'exécute à chaque démarrage puis s'arrête : attend la fin du safe mode et prépare /bronze.
+  # dr.who est l'identité anonyme de l'interface de HDFS : l'ACL lui donne la lecture seule sur /bronze et ce qui y sera créé
+  hdfs-init:
+    <<: *hadoop
+    command:
+      - bash
+      - -c
+      - hdfs dfsadmin -safemode wait && hdfs dfs -mkdir -p /bronze && hdfs dfs -chown airflow:airflow /bronze && hdfs dfs -chmod 750 /bronze && hdfs dfs -setfacl -m user:dr.who:r-x,default:user:dr.who:r-x /bronze
+    mem_limit: 512m
+    restart: "no"
+    depends_on:
+      namenode:
+        condition: service_healthy
+      datanode:
+        condition: service_healthy
+
+  # Base interne d'Airflow, séparée de la source métier et inaccessible depuis l'extérieur
+  airflow-db:
+    <<: *postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:?complétez .env à partir de .env.example}
+      POSTGRES_DB: airflow
+    networks:
+      - reseau_metadonnees
+    volumes:
+      - airflow_db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Airflow en un seul conteneur : ordonnanceur, interface et traitement des DAG
+  airflow:
+    <<: *socle
+    image: ${AIRFLOW_IMAGE:-ghcr.io/formateurdata/bac4-airflow:3.3.2-1}
+    build: ./airflow
+    command: ["bash", "/opt/airflow/demarrer.sh"]
+    environment:
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:?complétez .env à partir de .env.example}
+      AIRFLOW__API_AUTH__JWT_SECRET_CMD: cat /opt/airflow/secrets/jwt_secret
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY_CMD: cat /opt/airflow/secrets/fernet_key
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/secrets/mots_de_passe.json
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_USERS: admin:admin
+      AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: "30"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@airflow-db:5432/airflow
+      AIRFLOW_CONN_SOURCE_POSTGRES: '{"conn_type":"postgres","host":"source","port":5432,"schema":"boutique","login":"lecteur","password":"${LECTEUR_PASSWORD}"}'
+      AIRFLOW_CONN_BRONZE_HDFS: '{"conn_type":"webhdfs","host":"namenode","port":9870,"login":"airflow"}'
+    mem_limit: 3g
+    ports:
+      - "127.0.0.1:${AIRFLOW_PORT:-8081}:8080"
+    networks:
+      - reseau_source
+      - reseau_hdfs
+      - reseau_metadonnees
+    volumes:
+      - ../dags:/opt/airflow/dags:ro
+      - airflow_logs:/opt/airflow/logs
+      - airflow_secrets:/opt/airflow/secrets
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      source:
+        condition: service_healthy
+      airflow-db:
+        condition: service_healthy
+      hdfs-init:
+        condition: service_completed_successfully
+
+# Cloisonnement : la source et HDFS ne se voient pas, seul Airflow accède à sa base interne
+networks:
+  reseau_source:
+  reseau_hdfs:
+  reseau_metadonnees:
+    internal: true
+
+volumes:
+  source_data:
+  hdfs_name:
+  hdfs_data:
+  airflow_db:
+  airflow_logs:
+  airflow_secrets:
