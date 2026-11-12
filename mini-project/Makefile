@@ -7,7 +7,7 @@ PYTHON := uv run --no-project --with-requirements requirements.txt python
 .PHONY: help init pull up up-local build down reset logs ps generate verify bronze
 help:
 	@echo "init | pull | up | up-local | build | down | reset | logs | ps | generate | verify | bronze"
-
+# docker compose --env-file .env -f infra/docker-compose.yml test -f .env || cp .env.example .env
 init:
 	@test -f .env || cp .env.example .env
 
